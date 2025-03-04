@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
                 edge1.x * edge2.y - edge1.y * edge2.x   // Componente z
             };
             normal = normalize(normal);
-            
+            normal = vec3_scale(normal, -1);
             triangle->normal = normal;
         }
     }
