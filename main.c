@@ -10,10 +10,10 @@
 
 #define DEFAULT_AMBIENT_LIGHT {1.0f, 1.0f, 1.0f}
 
-#define RED {1.0f, 0.2f, 0.2f}
-#define BLUE {0.2f, 0.2f, 1.0f}
-#define WHITE {1.0f, 1.0f, 1.0f}
-#define BLACK {0.0f, 0.0f, 0.0f}
+const Vec3 RED = {1.0f, 0.2f, 0.2f};
+const Vec3 BLUE = {0.2f, 0.2f, 1.0f};
+const Vec3 WHITE = {1.0f, 1.0f, 1.0f};
+const Vec3 BLACK = {0.0f, 0.0f, 0.0f};
 
 #define PI  3.14159265358979323846
 
@@ -149,16 +149,49 @@ int main(int argc, char** argv) {
 	numLights = NUM_LIGHTS_DEBUG;
     }
 	
+     // Leer argumentos de línea de comandos
+     if (argc > 1) {
+        numSpheres = atoi(argv[1]);
+        if (numSpheres > 0) {
+            mode = EXPERIMENT_MODE;
+            numLights = numSpheres + 1; // Luces intercaladas + luz central
+        } else {
+            numSpheres = NUM_SPHERES_DEBUG;
+            numLights = NUM_LIGHTS_DEBUG;
+        }
+    }
+    
+    printf("Modo: %s\n", mode == DEBUG_MODE ? "Depuración" : "Experimentación");
+    printf("Número de esferas: %d\n", numSpheres);
+    printf("Número de luces: %d\n", numLights);
+    
     // Matriz de sombras entre objetos y luces
     bool ***shadowMatrix = createShadowMatrix(numSpheres, numLights);
     Sphere *sphere = (Sphere *) malloc(sizeof(Sphere)*numSpheres); 
     Light *light = (Light* )malloc(sizeof(Light)*numLights); 
 	
     Vec3 camera = CAMERA_POSITION;	
-    
-    // Create the spheres & the lights
-    if (mode==DEBUG_MODE)
-    	createDebugData( sphere, light);
+
+    if (mode == DEBUG_MODE) {
+        createDebugData(sphere, light);
+    } else {
+        
+        float radius = 0.7f / sinf(PI / numSpheres);
+        for (int i = 0; i < numSpheres; i++) {
+            float angle = (2.0f * PI / (2 * numSpheres)) * (2 * i);
+            Vec3 position = {radius * cos(angle), 0.0f, radius * sin(angle)};
+            int freq = 4 + (i * 2);
+            sphere[i] = createSphere(position, 0.5f, freq, RED);
+        }
+        
+        for (int i = 0; i < numSpheres; i++) {
+            float angle = (2.0f * PI / (2 * numSpheres)) * (2 * i + 1);
+            Vec3 position = {radius * cos(angle), 0.5f, radius * sin(angle)};
+            light[i] = createLight(position, WHITE, 0.13f);
+        }
+        
+        light[numSpheres] = createLight((Vec3){0.0f, 0.0f, 0.0f}, WHITE, 0.1f);
+    }
     
     // Medición del tiempo de ejecución: Inicio
     clock_t start_time = clock();
