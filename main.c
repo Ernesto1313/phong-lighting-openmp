@@ -79,32 +79,42 @@ int toFile(Sphere *sphere, int numSpheres) {
  * * numLights: n�mero de luces
  * */
 
-bool*** createShadowMatrix(int numSpheres, int numLights){
-    // Reservar memoria para la primera dimensi�n (i)
-    bool*** shadowMatrix = (bool ***)malloc(numSpheres * sizeof(bool **));
-    if (shadowMatrix == NULL) {
-        printf("Error al reservar memoria.\n");
+ bool*** createShadowMatrix(int numSpheres, int numLights) {
+    if (numSpheres <= 0 || numLights <= 0) {
+        printf("Error: numSpheres (%d) o numLights (%d) no válido.\n", numSpheres, numLights);
         return NULL;
     }
-    // Reservar memoria para la segunda dimensi�n (j)
-    for (int i = 0; i < numSpheres; i++) {
-         shadowMatrix[i] = (bool **)malloc(numSpheres * sizeof(bool *));
-         if (shadowMatrix[i] == NULL) {
-             printf("Error al reservar memoria.\n");
-             return NULL;
-         }
-         // Reservar memoria para la tercera dimensi�n (k)
-         for (int j = 0; j < numLights; j++) {
-              shadowMatrix[i][j] = (bool *)malloc(numLights * sizeof(bool));
-              if (shadowMatrix[i][j] == NULL) {
-                  printf("Error al reservar memoria.\n");
-                  return NULL;
-              }
-         }
+
+    bool*** shadowMatrix = (bool ***)malloc(numSpheres * sizeof(bool **));
+    if (shadowMatrix == NULL) {
+        printf("Error al reservar memoria para shadowMatrix.\n");
+        return NULL;
     }
-                                                                                                               
+
+    for (int i = 0; i < numSpheres; i++) {
+        shadowMatrix[i] = (bool **)malloc(numLights * sizeof(bool *));
+        if (shadowMatrix[i] == NULL) {
+            printf("Error al reservar memoria para shadowMatrix[%d].\n", i);
+            return NULL;
+        }
+
+        for (int j = 0; j < numLights; j++) {
+            shadowMatrix[i][j] = (bool *)malloc(numLights * sizeof(bool));
+            if (shadowMatrix[i][j] == NULL) {
+                printf("Error al reservar memoria para shadowMatrix[%d][%d].\n", i, j);
+                return NULL;
+            }
+
+            // Inicializar la memoria asignada para evitar valores basura
+            for (int k = 0; k < numLights; k++) {
+                shadowMatrix[i][j][k] = false;
+            }
+        }
+    }
+
     return shadowMatrix;
-};
+}
+;
 
 /*
  * * Funci�n createDebugData
@@ -166,7 +176,12 @@ int main(int argc, char** argv) {
     printf("Número de luces: %d\n", numLights);
     
     // Matriz de sombras entre objetos y luces
+    printf("numSpheres = %d, numLights = %d\n", numSpheres, numLights);
     bool ***shadowMatrix = createShadowMatrix(numSpheres, numLights);
+    if (shadowMatrix == NULL) {
+        printf("Error: No se pudo asignar memoria para shadowMatrix.\n");
+        return EXIT_FAILURE;
+    }
     Sphere *sphere = (Sphere *) malloc(sizeof(Sphere)*numSpheres); 
     Light *light = (Light* )malloc(sizeof(Light)*numLights); 
 	
