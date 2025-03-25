@@ -32,8 +32,10 @@ long flop_count = 0;  // Contador global de FLOPs
 
 // Función para contar FLOPs
 void count_flops(int ops) {
+    #pragma omp atomic
     flop_count += ops;
 }
+
 
 /*
  * * Funci�n toFile
@@ -150,10 +152,10 @@ void createDebugData(Sphere *sphere, Light *light){
 
 
 int main(int argc, char** argv) {
-	
     int mode = DEBUG_MODE;
     int numSpheres;
     int numLights;
+    
 	
     if (mode==DEBUG_MODE) {
 	numSpheres = NUM_SPHERES_DEBUG;
@@ -210,7 +212,7 @@ int main(int argc, char** argv) {
     }
     
     // Medición del tiempo de ejecución: Inicio
-    clock_t start_time = clock();
+    double start_time = omp_get_wtime();
     // Función para calcular la normal de un triángulo
     // Calcular la normal de los triángulos de las esferas
     
@@ -225,9 +227,9 @@ int main(int argc, char** argv) {
             Vec3 v2 = triangle->v[2];
             
             Vec3 edge1 = vec3_sub(v1, v0);  // 1 FLOP (subtraction)
-                count_flops(1);
+                //count_flops(1);
             Vec3 edge2 = vec3_sub(v2, v0);  // 1 FLOP (subtraction)
-                count_flops(1);
+                //count_flops(1);
             
             Vec3 normal = {
                 edge1.y * edge2.z - edge1.z * edge2.y,  // Componente x
@@ -235,12 +237,12 @@ int main(int argc, char** argv) {
                 edge1.x * edge2.y - edge1.y * edge2.x   // Componente z
             };
             // 9 FLOPS = 3*(2 Mults + 1 Subs)
-            count_flops(9);
+            //count_flops(9);
 
             normal = normalize(normal); // 8 FLOPS Sqrt
-                count_flops(8);
+                //count_flops(8);
             normal = vec3_scale(normal, -1);
-                count_flops(1);
+                //count_flops(1);
             triangle->normal = normal;
         }
     }
@@ -249,14 +251,13 @@ int main(int argc, char** argv) {
     	
     // Calcular la bounding box
     Vec3 minBound = {INFINITY, INFINITY, INFINITY};
-Vec3 maxBound = {-INFINITY, -INFINITY, -INFINITY};
+    Vec3 maxBound = {-INFINITY, -INFINITY, -INFINITY};
 
-#pragma omp parallel
-{
+
     Vec3 localMin = {INFINITY, INFINITY, INFINITY};
     Vec3 localMax = {-INFINITY, -INFINITY, -INFINITY};
 
-    #pragma omp for
+    #pragma omp parallel for
     for (int s = 0; s < numSpheres; s++) {
         for (int t = 0; t < sphere[s].numTriangles; t++) {
             for (int v = 0; v < 3; v++) {
@@ -272,17 +273,13 @@ Vec3 maxBound = {-INFINITY, -INFINITY, -INFINITY};
         }
     }
 
-    // Fusión manual de los valores mínimos y máximos en una región crítica
-    #pragma omp critical
-    {
+    
         if (localMin.x < minBound.x) minBound.x = localMin.x;
         if (localMin.y < minBound.y) minBound.y = localMin.y;
         if (localMin.z < minBound.z) minBound.z = localMin.z;
         if (localMax.x > maxBound.x) maxBound.x = localMax.x;
         if (localMax.y > maxBound.y) maxBound.y = localMax.y;
         if (localMax.z > maxBound.z) maxBound.z = localMax.z;
-    }
-}
 
     
     // Calcular la matriz de sombres
@@ -292,11 +289,11 @@ Vec3 maxBound = {-INFINITY, -INFINITY, -INFINITY};
             for (int k = 0; k < numLights; k++) {
                 // Cálculo de las distancias
                 float dLA = distance(sphere[i].center, light[k].position); // 8 FLOPS Sqrt
-                    count_flops(8);
+                    //count_flops(8);
                 float dAB = distance(sphere[i].center, sphere[j].center); // 8 FLOPS Sqrt
-                    count_flops(8);
+                    //count_flops(8);
                 float dLB = distance(light[k].position, sphere[j].center); // 8 FLOPS Sqrt
-                    count_flops(8);
+                    //count_flops(8);
 
                 // Si la esfera A no está entre L y B, no bloquea la luz
                 if ((dLA + dAB) > dLB) {
@@ -304,9 +301,9 @@ Vec3 maxBound = {-INFINITY, -INFINITY, -INFINITY};
                 } else {
                     // Cálculo de la tangente del cono de sombra
                     float tanShadow = sphere[i].radius / dLA; // 4 FLOPS Div
-                        count_flops(4);
+                        //count_flops(4);
                     float shadowRadius = sphere[i].radius + dAB * tanShadow;  // 2 FLOPS Add + Mult 
-                        count_flops(2);
+                        //count_flops(2);
                     // Verificar si el shadowRadius de A es mayor que el radio de B
                     if (shadowRadius > sphere[j].radius) {
                         shadowMatrix[i][j][k] = true;  // A hace sombra sobre B
@@ -333,36 +330,36 @@ Vec3 maxBound = {-INFINITY, -INFINITY, -INFINITY};
                     if (!shadowMatrix[s][s][l]) {
                         // Vector de luz y vector de visión
                         Vec3 L = normalize(vec3_sub(light[l].position, triangle->v[0])); // Desde el vértice hacia la luz
-                            count_flops(8); // 8 FLOPs Sqrt
+                            //count_flops(8); // 8 FLOPs Sqrt
                         Vec3 V = normalize(vec3_sub(camera, triangle->v[0])); // Desde el vértice hacia la cámara
-                            count_flops(8); // 8 FLOPs Sqrt
+                            //count_flops(8); // 8 FLOPs Sqrt
                         // Componente difusa: max(0, dot(N, L))
                         float NL = dotProduct(triangle->normal, L);
-                            count_flops(1);
+                            //count_flops(1);
                         if (NL < 0) NL = 0;
                         Vec3 D = vec3_scale(sphere[s].material.diffuse, NL * light[l].intensity);
-                            count_flops(3);
+                            //count_flops(3);
 
                         // Componente especular: calcular el reflejo
                         Vec3 R = normalize(vec3_sub(vec3_scale(triangle->normal, 2 * NL), L));
-                            count_flops(9);
+                            //count_flops(9);
                         float RV = dotProduct(R, V);
-                            count_flops(1);
+                            //count_flops(1);
                         if (RV < 0) RV = 0;
                         float specFactor = pow(RV, sphere[s].material.shininess);
-                            count_flops(8);
+                            //count_flops(8);
                         Vec3 S = vec3_scale(sphere[s].material.specular, specFactor * light[l].intensity);
-                            count_flops(3);
+                            //count_flops(3);
 
                         // Multiplicar las componentes difusa y especular por el color de la luz
                         D = vec3_scale(D, light[l].color.x);
-                            count_flops(1);
+                            //count_flops(1);
                         S = vec3_scale(S, light[l].color.x);
-                            count_flops(1);
+                            //ount_flops(1);
 
                         // Sumar las contribuciones de la luz
                         color = vec3_add(color, vec3_add(D, S));
-                            count_flops(2);
+                            //count_flops(2);
                     }
                 }
                 
@@ -375,10 +372,12 @@ Vec3 maxBound = {-INFINITY, -INFINITY, -INFINITY};
     }
 
     // Medición del tiempo de ejecución: Fin
-    clock_t end_time = clock();
-    double time_taken = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;  // Conversion de ticks a segundos
+    double time_taken = omp_get_wtime() - start_time;
+    printf("Tiempo de ejecución (OpenMP): %.5f segundos\n", time_taken);  // Conversion de ticks a segundos
     printf("Tiempo de ejecucion: %.5f segundos\n", time_taken);
     printf("Numero de esferas: %d, FLOPs totales: %ld\n", numSpheres, flop_count);
+    printf("Número de hilos activos: %d\n", omp_get_max_threads());
+
 
     	
     // Guardar los vertices y colores en un archivo
