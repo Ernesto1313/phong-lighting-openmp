@@ -8,7 +8,6 @@
 #include <mpi.h>
 
 #define CAMERA_POSITION  {12.0f, 0.0f, 0.0f}
-
 #define DEFAULT_AMBIENT_LIGHT {1.0f, 1.0f, 1.0f}
 
 const Vec3 RED = {1.0f, 0.2f, 0.2f};
@@ -17,7 +16,6 @@ const Vec3 WHITE = {1.0f, 1.0f, 1.0f};
 const Vec3 BLACK = {0.0f, 0.0f, 0.0f};
 
 #define PI  3.14159265358979323846
-
 #define NUM_SPHERES_DEBUG 2
 #define NUM_LIGHTS_DEBUG 2
 
@@ -28,7 +26,7 @@ const Vec3 BLACK = {0.0f, 0.0f, 0.0f};
 Vec3 ambientLight = DEFAULT_AMBIENT_LIGHT;
 
 // Contador de FLOPs
-long flop_count = 0;  // Contador global de FLOPs
+long flop_count = 0;
 
 // Función para contar FLOPs
 void count_flops(int ops) {
@@ -37,7 +35,7 @@ void count_flops(int ops) {
 
 // Definición del tipo MPI_Triangle
 void create_mpi_triangle(MPI_Datatype* MPI_Triangle) {
-    int blocklengths[3] = {3, 3, 1};  // v[3], c[3], normal
+    int blocklengths[3] = {3, 3, 1};
     MPI_Datatype types[3] = {MPI_FLOAT, MPI_FLOAT, MPI_FLOAT};
     MPI_Aint offsets[3];
     offsets[0] = offsetof(Triangle, v);
@@ -47,170 +45,107 @@ void create_mpi_triangle(MPI_Datatype* MPI_Triangle) {
     MPI_Type_commit(MPI_Triangle);
 }
 
-
-/*
- * * Funci�n toFile
- * * Funci�n  guarda los v�rtices y los colores de las esferas
- * *          en archivo salida.txt
- * *-------------------------
- * * Par�metros
- * * sphere: array de esferas
- * * numSpheres : n�mero de esferas
- * */
 int toFile(Sphere *sphere, int numSpheres) {
-	// Abrir el archivo para escritura
     FILE *file = fopen("salida.txt", "w");
     if (file == NULL) {
         perror("Error al abrir el archivo");
         return EXIT_FAILURE;
     }
-    
-    for (int s=0; s<numSpheres; s++) { 
-    	for (int t=0; t<sphere[s].numTriangles; t++) {
-    		for (int v=0; v<3; v++) {			
-    			Vec3 p = sphere[s].triangles[t].v[v];
-    			Vec3 c = sphere[s].triangles[t].c[v];
-    			fprintf(file, "%.2f %.2f %.2f", p.x, p.y, p.z);
-    			fprintf(file, " ");
-    			fprintf(file, "%.2f %.2f %.2f", c.x, c.y, c.z);
-    			fprintf(file, " ");
-    		}
-    		fprintf(file, "\n");
-	}
+
+    for (int s = 0; s < numSpheres; s++) {
+        for (int t = 0; t < sphere[s].numTriangles; t++) {
+            for (int v = 0; v < 3; v++) {
+                Vec3 p = sphere[s].triangles[t].v[v];
+                Vec3 c = sphere[s].triangles[t].c[v];
+                fprintf(file, "%.2f %.2f %.2f ", p.x, p.y, p.z);
+                fprintf(file, "%.2f %.2f %.2f ", c.x, c.y, c.z);
+            }
+            fprintf(file, "\n");
+        }
     }
-	
-	fclose(file);
-	
-	return FILE_OK;	
+    fclose(file);
+    return FILE_OK;
 }
 
-/*
- * * Funci�n createShadowMatrix
- * * Funci�n  que crea la matriz de sombras
- * *-------------------------
- * * Par�metros
- * * numSpheres : n�mero de esferas
- * * numLights: n�mero de luces
- * */
-
- bool*** createShadowMatrix(int numSpheres, int numLights) {
+bool*** createShadowMatrix(int numSpheres, int numLights) {
     if (numSpheres <= 0 || numLights <= 0) {
         printf("Error: numSpheres (%d) o numLights (%d) no válido.\n", numSpheres, numLights);
         return NULL;
     }
-
     bool*** shadowMatrix = (bool ***)malloc(numSpheres * sizeof(bool **));
-    if (shadowMatrix == NULL) {
-        printf("Error al reservar memoria para shadowMatrix.\n");
-        return NULL;
-    }
-
     for (int i = 0; i < numSpheres; i++) {
         shadowMatrix[i] = (bool **)malloc(numLights * sizeof(bool *));
-        if (shadowMatrix[i] == NULL) {
-            printf("Error al reservar memoria para shadowMatrix[%d].\n", i);
-            return NULL;
-        }
-
         for (int j = 0; j < numLights; j++) {
             shadowMatrix[i][j] = (bool *)malloc(numLights * sizeof(bool));
-            if (shadowMatrix[i][j] == NULL) {
-                printf("Error al reservar memoria para shadowMatrix[%d][%d].\n", i, j);
-                return NULL;
-            }
-
-            // Inicializar la memoria asignada para evitar valores basura
             for (int k = 0; k < numLights; k++) {
                 shadowMatrix[i][j][k] = false;
             }
         }
     }
-
     return shadowMatrix;
 }
-;
 
-/*
- * * Funci�n createDebugData
- * * Funci�n  que crea las esferas y luces en modo debug
- * *-------------------------
- * * Par�metros
- * * sphere : matriz con las esferas de la escena
- * * light: matriz con las luces de la escena
- * */
+void createDebugData(Sphere *sphere, Light *light) {
+    Vec3 center[NUM_SPHERES_DEBUG] = {{0.0f, 1.0f, 0.0f}, {0.0f, 6.0f, 0.0f}};
+    float radius[NUM_SPHERES_DEBUG] = {1.0f, 1.25f};
+    int freq[NUM_SPHERES_DEBUG] = {8, 16};
+    Vec3 color[NUM_SPHERES_DEBUG] = {RED, BLUE};
+    Vec3 lightPos[NUM_LIGHTS_DEBUG] = {{0.0f, -2.0f, 0.0f},{0.0f, 2.5f, 0.0f}};
+    Vec3 lightCol[NUM_LIGHTS_DEBUG] = {WHITE, WHITE};
+    float lightIntensity[NUM_LIGHTS_DEBUG] = {1.0f, 1.0f};
 
-void createDebugData(Sphere *sphere, Light *light){
-	
-   Vec3 center[NUM_SPHERES_DEBUG] = {{0.0f, 1.0f, 0.0f}, {0.0f, 6.0f, 0.0f}};
-   float radius[NUM_SPHERES_DEBUG] = {1.0f, 1.25f};
-   int freq[NUM_SPHERES_DEBUG] = {8, 16};
-   Vec3 color[NUM_SPHERES_DEBUG] = {RED, BLUE};
-
-   Vec3 lightPos[NUM_LIGHTS_DEBUG] = {{0.0f, -2.0f, 0.0f},{0.0f, 2.5f, 0.0f}};
-   Vec3 lightCol[NUM_LIGHTS_DEBUG] = {WHITE, WHITE};
-   float lightIntensity[NUM_LIGHTS_DEBUG] = {1.0f, 1.0f};
-	
-   // Create the spheres
-   for (int i=0; i<NUM_SPHERES_DEBUG; i++) {
-    	sphere[i] = createSphere(center[i], radius[i], freq[i], color[i]);   
-   }
-    	
-   // Create the lights
-   for (int l=0; l<NUM_LIGHTS_DEBUG; l++) {
-      light[l] = createLight(lightPos[l], lightCol[l], lightIntensity[l]);
-   }		
+    for (int i = 0; i < NUM_SPHERES_DEBUG; i++) {
+        sphere[i] = createSphere(center[i], radius[i], freq[i], color[i]);
+    }
+    for (int l = 0; l < NUM_LIGHTS_DEBUG; l++) {
+        light[l] = createLight(lightPos[l], lightCol[l], lightIntensity[l]);
+    }
 }
 
-
 int main(int argc, char** argv) {
-	
     int mode = DEBUG_MODE;
     int numSpheres;
     int numLights;
 
-    MPI_Init(&argc, &argv); 
-
+    MPI_Init(&argc, &argv);
     int rank, numprocs;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
-	
-    if (mode==DEBUG_MODE) {
-	numSpheres = NUM_SPHERES_DEBUG;
-	numLights = NUM_LIGHTS_DEBUG;
-    }
-	
-     // Leer argumentos de línea de comandos
-     if (argc > 1) {
+
+    MPI_Datatype MPI_Triangle;
+    create_mpi_triangle(&MPI_Triangle);
+
+    if (argc > 1) {
         numSpheres = atoi(argv[1]);
         if (numSpheres > 0) {
             mode = EXPERIMENT_MODE;
-            numLights = numSpheres + 1; // Luces intercaladas + luz central
+            numLights = numSpheres + 1;
         } else {
             numSpheres = NUM_SPHERES_DEBUG;
             numLights = NUM_LIGHTS_DEBUG;
         }
+    } else {
+        numSpheres = NUM_SPHERES_DEBUG;
+        numLights = NUM_LIGHTS_DEBUG;
     }
-    
+
+    int spheres_per_proc = numSpheres / numprocs;
+    int remainder = numSpheres % numprocs;
+    int my_spheres = spheres_per_proc + (rank < remainder ? 1 : 0);
+
     printf("Modo: %s\n", mode == DEBUG_MODE ? "Depuración" : "Experimentación");
     printf("Número de esferas: %d\n", numSpheres);
     printf("Número de luces: %d\n", numLights);
-    
-    // Matriz de sombras entre objetos y luces
-    printf("numSpheres = %d, numLights = %d\n", numSpheres, numLights);
+
     bool ***shadowMatrix = createShadowMatrix(numSpheres, numLights);
-    if (shadowMatrix == NULL) {
-        printf("Error: No se pudo asignar memoria para shadowMatrix.\n");
-        return EXIT_FAILURE;
-    }
-    Sphere *sphere = (Sphere *) malloc(sizeof(Sphere)*numSpheres); 
-    Light *light = (Light* )malloc(sizeof(Light)*numLights); 
-	
-    Vec3 camera = CAMERA_POSITION;	
+    if (shadowMatrix == NULL) return EXIT_FAILURE;
+
+    Sphere *sphere = (Sphere *) malloc(sizeof(Sphere)*numSpheres);
+    Light *light = (Light* )malloc(sizeof(Light)*numLights);
 
     if (mode == DEBUG_MODE) {
         createDebugData(sphere, light);
     } else {
-        
         float radius = 0.7f / sinf(PI / numSpheres);
         for (int i = 0; i < numSpheres; i++) {
             float angle = (2.0f * PI / (2 * numSpheres)) * (2 * i);
@@ -218,21 +153,42 @@ int main(int argc, char** argv) {
             int freq = 4 + (i * 2);
             sphere[i] = createSphere(position, 0.5f, freq, RED);
         }
-        
         for (int i = 0; i < numSpheres; i++) {
             float angle = (2.0f * PI / (2 * numSpheres)) * (2 * i + 1);
             Vec3 position = {radius * cos(angle), 0.5f, radius * sin(angle)};
             light[i] = createLight(position, WHITE, 0.13f);
         }
-        
         light[numSpheres] = createLight((Vec3){0.0f, 0.0f, 0.0f}, WHITE, 0.1f);
     }
+
+    if (rank == 0) {
+        int offset = my_spheres;
+        for (int dest = 1; dest < numprocs; dest++) {
+            int count = spheres_per_proc + (dest < remainder ? 1 : 0);
+            MPI_Send(&count, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
+            MPI_Send(&sphere[offset], count * sizeof(Sphere), MPI_BYTE, dest, 1, MPI_COMM_WORLD);
+            for (int i = 0; i < count; i++) {
+                MPI_Send(sphere[offset + i].triangles, sphere[offset + i].numTriangles, MPI_Triangle, dest, 2, MPI_COMM_WORLD);
+            }
+            offset += count;
+        }
+    } else {
+        MPI_Recv(&my_spheres, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        sphere = (Sphere *) malloc(my_spheres * sizeof(Sphere));
+        MPI_Recv(sphere, my_spheres * sizeof(Sphere), MPI_BYTE, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        for (int i = 0; i < my_spheres; i++) {
+            sphere[i].triangles = (Triangle*) malloc(sphere[i].numTriangles * sizeof(Triangle));
+            MPI_Recv(sphere[i].triangles, sphere[i].numTriangles, MPI_Triangle, 0, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        }
+    }
+
+     Vec3 camera = CAMERA_POSITION;
     
     // Medición del tiempo de ejecución: Inicio
     clock_t start_time = clock();
     // Función para calcular la normal de un triángulo
     // Calcular la normal de los triángulos de las esferas
-    for (int s = 0; s < numSpheres; s++) {
+    for (int s = 0; s < my_spheres; s++) {
         for (int t = 0; t < sphere[s].numTriangles; t++) {
             Triangle *triangle = &sphere[s].triangles[t];
             Vec3 v0 = triangle->v[0];
@@ -266,7 +222,7 @@ int main(int argc, char** argv) {
     Vec3 minBound = {INFINITY, INFINITY, INFINITY};
     Vec3 maxBound = {-INFINITY, -INFINITY, -INFINITY};
 
-    for (int s = 0; s < numSpheres; s++) {
+    for (int s = 0; s < my_spheres; s++) {
         for (int t = 0; t < sphere[s].numTriangles; t++) {
             for (int v = 0; v < 3; v++) {
 
@@ -282,7 +238,7 @@ int main(int argc, char** argv) {
     }
     
     // Calcular la matriz de sombres
-    for (int i = 0; i < numSpheres; i++) {
+    for (int i = 0; i < my_spheres; i++) {
         for (int j = 0; j < numSpheres; j++) {
             for (int k = 0; k < numLights; k++) {
                 // Cálculo de las distancias
@@ -315,7 +271,7 @@ int main(int argc, char** argv) {
     
     
     // Calcular la iluminaci�n Phong sobre las esferas teniendo en cuenta las sombras
-    for (int s = 0; s < numSpheres; s++) {
+    for (int s = 0; s < my_spheres; s++) {
         for (int t = 0; t < sphere[s].numTriangles; t++) {
             Triangle *triangle = &sphere[s].triangles[t];
             Vec3 color = {0.0f, 0.0f, 0.0f}; // Color final del triángulo
@@ -378,7 +334,7 @@ int main(int argc, char** argv) {
         printf("El archivo se ha creado.\n");
     else
         printf("El archivo NO se ha creado\n");
-}
+    }
 
     
     
@@ -394,7 +350,7 @@ int main(int argc, char** argv) {
     free(shadowMatrix); // Liberar la primera dimensión
 
     // Liberar la memoria de las esferas
-    for (int s = 0; s < numSpheres; s++) {
+    for (int s = 0; s < my_spheres; s++) {
         for (int t = 0; t < sphere[s].numTriangles; t++) {
             free(sphere[s].triangles[t].v);  // Liberar memoria de los vértices si es necesario
             free(sphere[s].triangles[t].c);  // Liberar memoria de los colores si es necesario
@@ -407,7 +363,7 @@ int main(int argc, char** argv) {
     free(light); // Liberar el array de luces
 
 
-
+    MPI_Type_free(&MPI_Triangle);
     MPI_Finalize();
 
     return 0;
