@@ -350,11 +350,18 @@ int main(int argc, char** argv) {
     free(shadowMatrix); // Liberar la primera dimensión
 
     // Liberar la memoria de las esferas
+    int spheres_to_free = (rank == 0) ? numSpheres : my_spheres;
+
+    for (int s = 0; s < spheres_to_free; s++) {
+        free(sphere[s].triangles); // Liberar la memoria de los triángulos
+    }
     free(sphere); // Liberar el array de esferas
 
     // Liberar la memoria de las luces
     free(light); // Liberar el array de luces
 
+
+    
 
     MPI_Type_free(&MPI_Triangle);
     MPI_Finalize();
