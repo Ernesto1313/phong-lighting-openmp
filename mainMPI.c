@@ -167,6 +167,12 @@ int main(int argc, char** argv) {
     int mode = DEBUG_MODE;
     int numSpheres;
     int numLights;
+
+    MPI_Init(&argc, &argv); 
+
+    int rank, numprocs;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
 	
     if (mode==DEBUG_MODE) {
 	numSpheres = NUM_SPHERES_DEBUG;
@@ -367,10 +373,13 @@ int main(int argc, char** argv) {
 
     	
     // Guardar los vertices y colores en un archivo
+    if (rank == 0) {
     if (toFile(sphere, numSpheres) == FILE_OK)
-	printf("El archivo se ha creado.\n");
+        printf("El archivo se ha creado.\n");
     else
-	printf("El archivo NO se ha creado\n");
+        printf("El archivo NO se ha creado\n");
+}
+
     
     
 
@@ -399,6 +408,7 @@ int main(int argc, char** argv) {
 
 
 
-    
+    MPI_Finalize();
+
     return 0;
 }
