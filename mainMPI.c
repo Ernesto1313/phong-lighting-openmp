@@ -324,8 +324,10 @@ int main(int argc, char** argv) {
     // Medición del tiempo de ejecución: Fin
     clock_t end_time = clock();
     double time_taken = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;  // Conversion de ticks a segundos
+    if(rank==0){
     printf("Tiempo de ejecucion: %.5f segundos\n", time_taken);
     printf("Numero de esferas: %d, FLOPs totales: %ld\n", numSpheres, flop_count);
+    }
 
     	
     // Guardar los vertices y colores en un archivo
