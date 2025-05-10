@@ -350,13 +350,6 @@ int main(int argc, char** argv) {
     free(shadowMatrix); // Liberar la primera dimensión
 
     // Liberar la memoria de las esferas
-    for (int s = 0; s < my_spheres; s++) {
-        for (int t = 0; t < sphere[s].numTriangles; t++) {
-            free(sphere[s].triangles[t].v);  // Liberar memoria de los vértices si es necesario
-            free(sphere[s].triangles[t].c);  // Liberar memoria de los colores si es necesario
-        }
-        free(sphere[s].triangles); // Liberar la memoria de los triángulos
-    }
     free(sphere); // Liberar el array de esferas
 
     // Liberar la memoria de las luces
