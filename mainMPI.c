@@ -132,11 +132,11 @@ int main(int argc, char** argv) {
     int spheres_per_proc = numSpheres / numprocs;
     int remainder = numSpheres % numprocs;
     int my_spheres = spheres_per_proc + (rank < remainder ? 1 : 0);
-
+    if (rank == 0) {
     printf("Modo: %s\n", mode == DEBUG_MODE ? "Depuración" : "Experimentación");
     printf("Número de esferas: %d\n", numSpheres);
     printf("Número de luces: %d\n", numLights);
-
+    }
     bool ***shadowMatrix = createShadowMatrix(numSpheres, numLights);
     if (shadowMatrix == NULL) return EXIT_FAILURE;
 
