@@ -341,13 +341,16 @@ int main(int argc, char** argv) {
 
     
     // Liberar la memoria de la matriz de sombras
-    for (int i = 0; i < numSpheres; i++) {
-        for (int j = 0; j < numLights; j++) {
-            free(shadowMatrix[i][j]); // Liberar cada fila de la tercera dimensión
+    if (shadowMatrix != NULL) {
+        for (int i = 0; i < numSpheres; i++) {
+            for (int j = 0; j < numLights; j++) {
+                free(shadowMatrix[i][j]);
+            }
+            free(shadowMatrix[i]);
         }
-        free(shadowMatrix[i]); // Liberar cada fila de la segunda dimensión
+        free(shadowMatrix);
     }
-    free(shadowMatrix); // Liberar la primera dimensión
+
 
     // Liberar la memoria de las esferas
     int spheres_to_free = (rank == 0) ? numSpheres : my_spheres;
