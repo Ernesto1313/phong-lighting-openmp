@@ -185,6 +185,7 @@ int main(int argc, char** argv) {
      Vec3 camera = CAMERA_POSITION;
     
     // Medición del tiempo de ejecución: Inicio
+    double start_time = 0.0;
     if(rank == 0){
         clock_t start_time = MPI_Wtime();
     }
@@ -324,11 +325,14 @@ int main(int argc, char** argv) {
     }
 
     // Medición del tiempo de ejecución: Fin
+    
+    long global_flops = 0;
+    MPI_Reduce(&flop_count, &global_flops, 1, MPI_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
     if(rank == 0){
-        clock_t end_time = MPI_Wtime();
-        double time_taken = ((double)(end_time - start_time)) / CLOCKS_PER_SEC;  // Conversion de ticks a segundos
+        double end_time = MPI_Wtime();
+        double time_taken = end_time - start_time;
         printf("Tiempo de ejecucion: %.5f segundos\n", time_taken);
-        printf("Numero de esferas: %d, FLOPs totales: %ld\n", numSpheres, flop_count);
+        printf("Numero de esferas: %d, FLOPs totales (globales): %ld\n", numSpheres, global_flops);
     }
 
     	
