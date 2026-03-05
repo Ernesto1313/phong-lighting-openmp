@@ -1,4 +1,4 @@
-**# Parallel Phong Lighting (OpenMP)
+# Parallel Phong Lighting (OpenMP)
 
 This project implements the **Phong lighting algorithm** in C and explores its **parallelization using OpenMP** as part of a Computer Architecture course.
 
