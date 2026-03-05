@@ -22,17 +22,17 @@ The goal of the project is to analyze the performance difference between a **seq
 
 ## Project Structure
 
-src/ -> Source code of the implementation
-report/ -> Project report and documentation
-results/ -> Experimental results and performance graphs
-Makefile -> Compilation instructions
+- src/ -> Source code of the implementation
+- report/ -> Project report and documentation
+- results/ -> Experimental results and performance graphs
+- Makefile -> Compilation instructions
 
 
 ## Compilation
 
-Example compilation using GCC with OpenMP support:
+- Example compilation using GCC with OpenMP support:
   gcc -O2 -fopenmp phong.c -o phong
-To compile without optimization:
+- To compile without optimization:
   gcc -fopenmp phong.c -o phong
 
 ## Execution
@@ -56,4 +56,4 @@ This project was developed for the **Computer Architecture Laboratory** at the *
 ## Author
 
 Ernesto  
-Computer Engineering Student**
+Computer Engineering Student
